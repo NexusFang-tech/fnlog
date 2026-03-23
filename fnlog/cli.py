@@ -452,8 +452,6 @@ def seasons(season):
 @click.option("--player", "-p", default=None)
 def export_csv(season, output, player):
     """Export session history to CSV."""
-    import csv
-    from pathlib import Path
 
     epic = player or EPIC_NAME
     sessions = get_sessions(epic, limit=9999, season=season)
@@ -463,7 +461,7 @@ def export_csv(season, output, player):
         console.print("[#7070a0]No sessions to export.[/#7070a0]")
         return
 
-    out_path = Path(output) if output else Path(f"fnlog_export_{epic}{'_' + season if season else ''}.csv")
+    out_path = Path(output) if output else Path("fnlog_export_" + epic + ("_" + season if season else "") + ".csv")
 
     fieldnames = ["id", "date", "season", "matches", "wins", "kills", "kd",
                   "win_rate", "kills_per_match", "minutes_played", "duration_min", "notes"]
