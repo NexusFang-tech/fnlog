@@ -12,7 +12,7 @@ from fnlog.db import (
     get_sessions, get_career_totals, init_db, get_session,
     get_bests, get_win_streak, get_seasons,
 )
-from fnlog.config import MODES, RANKED_MODES, EPIC_NAME, WEB_PORT
+from fnlog.config import MODES, RANKED_MODES, EPIC_NAME, WEB_PORT, CURRENT_SEASON
 
 app = FastAPI(title="FNLog", docs_url=None, redoc_url=None)
 TEMPLATES_DIR = Path(__file__).parent / "templates"

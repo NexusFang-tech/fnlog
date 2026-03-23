@@ -14,13 +14,14 @@ from rich.table import Table
 from rich.prompt import Prompt, Confirm
 from rich import box
 
-from fnlog.config import EPIC_NAME, API_KEY, MODES, RANKED_MODES, WEB_PORT
+from fnlog.config import EPIC_NAME, API_KEY, MODES, RANKED_MODES, WEB_PORT, CURRENT_SEASON, DISCORD_WEBHOOK
 from fnlog.db import (
     init_db, save_snapshot, save_ranked_snapshot, save_session,
     get_sessions, get_latest_snapshot, get_career_totals,
     get_bests, get_win_streak, get_seasons, clean_empty_sessions,
 )
 from fnlog.api import get_stats, get_ranked_stats, compute_delta
+from fnlog.discord import send_session_embed
 
 console = Console()
 ALL_MODES = {**MODES, **RANKED_MODES}
@@ -38,7 +39,6 @@ BANNER = """[bold #b44fff]
 STATE_FILE = Path.home() / ".fnlog" / "active_session.json"
 
 # Current season — update each new season
-CURRENT_SEASON = "Ch6S2"
 
 
 def _check_config():
@@ -251,6 +251,30 @@ def end(notes):
     summary += f"\n\n[dim]View at http://localhost:{WEB_PORT}/session/{session_id}[/dim]"
     summary += f"\n[dim]Share at http://localhost:{WEB_PORT}/share/{session_id}[/dim]"
 
+    # Discord notification
+    if DISCORD_WEBHOOK:
+        flat_session = {
+            "id": session_id, "epic_name": epic, "season": season,
+            "matches": matches, "wins": wins, "kills": kills,
+            "kd": kd, "win_rate": win_rate, "minutes_played": minutes_played,
+            "notes": notes or "",
+        }
+        flat_modes = []
+        for mk, d in deltas.items():
+            if mk == "overall" or not isinstance(d, dict) or not d.get("matches"):
+                continue
+            from fnlog.config import MODES, RANKED_MODES
+            all_m = {**MODES, **RANKED_MODES}
+            flat_modes.append({
+                "name": all_m.get(mk, mk),
+                "matches": d.get("matches", 0), "wins": d.get("wins", 0),
+                "kills": d.get("kills", 0), "kd": d.get("kd", 0.0),
+                "win_rate": d.get("win_rate", 0.0),
+            })
+        sent = send_session_embed(flat_session, flat_modes)
+        if sent:
+            console.print("[#7070a0]Discord notification sent.[/#7070a0]")
+
     console.print(Panel(summary, title="[bold #b44fff]FNLog[/bold #b44fff]", border_style="#b44fff"))
 
 
@@ -420,3 +444,47 @@ def seasons(season):
             f"  [#7070a0]Wins:[/#7070a0] [#b44fff]{tw}[/#b44fff]"
             f"  [#7070a0]Win%:[/#7070a0] [#ff4fb8]{wr}%[/#ff4fb8]"
         )
+
+
+@main.command("export")
+@click.option("--season", "-s", default=None, help="Filter by season.")
+@click.option("--output", "-o", default=None, help="Output file path (default: fnlog_export.csv)")
+@click.option("--player", "-p", default=None)
+def export_csv(season, output, player):
+    """Export session history to CSV."""
+    import csv
+    from pathlib import Path
+
+    epic = player or EPIC_NAME
+    sessions = get_sessions(epic, limit=9999, season=season)
+    real = [s for s in sessions if s["matches"] > 0]
+
+    if not real:
+        console.print("[#7070a0]No sessions to export.[/#7070a0]")
+        return
+
+    out_path = Path(output) if output else Path(f"fnlog_export_{epic}{'_' + season if season else ''}.csv")
+
+    fieldnames = ["id", "date", "season", "matches", "wins", "kills", "kd",
+                  "win_rate", "kills_per_match", "minutes_played", "duration_min", "notes"]
+
+    with out_path.open("w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        for s in reversed(real):
+            writer.writerow({
+                "id":             s["id"],
+                "date":           s["ended_at"][:10],
+                "season":         s.get("season") or "",
+                "matches":        s["matches"],
+                "wins":           s["wins"],
+                "kills":          s["kills"],
+                "kd":             round(s["kd"], 2),
+                "win_rate":       round(s["win_rate"], 1),
+                "kills_per_match": round(s["kills_per_match"], 2),
+                "minutes_played": s["minutes_played"],
+                "duration_min":   s.get("duration_min") or 0,
+                "notes":          s.get("notes") or "",
+            })
+
+    console.print(f"[#00f5d4]Exported {len(real)} session(s) to[/#00f5d4] [#b44fff]{out_path}[/#b44fff]")
