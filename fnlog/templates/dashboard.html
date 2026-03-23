@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FNLog // {{ epic_name }}</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
+:root{--purple:#b44fff;--pink:#ff4fb8;--teal:#00f5d4;--cyan:#00d4ff;--bg:#0d0d1a;--card:#1a1a2e;--border:#2a2a4a;--text:#e0e0ff;--muted:#7070a0;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monospace;min-height:100vh;}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(180,79,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(180,79,255,0.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+.container{max-width:1200px;margin:0 auto;padding:2rem;position:relative;z-index:1;}
+.header{text-align:center;margin-bottom:2rem;}
+.logo{font-family:'Orbitron',sans-serif;font-size:clamp(2.5rem,6vw,4.5rem);font-weight:900;background:linear-gradient(135deg,var(--purple),var(--pink),var(--teal));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:.1em;line-height:1;margin-bottom:.4rem;}
+.tagline{color:var(--muted);font-size:.85rem;letter-spacing:.2em;}
+.player-name{color:var(--cyan);font-family:'Orbitron',sans-serif;font-size:1.1rem;margin-top:.5rem;}
+
+/* Player search */
+.search-bar{display:flex;gap:.5rem;justify-content:center;margin:.75rem 0 1.5rem;flex-wrap:wrap;}
+.search-bar input{background:var(--card);border:1px solid var(--border);color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.85rem;padding:.5rem 1rem;border-radius:4px;width:220px;}
+.search-bar input:focus{outline:none;border-color:var(--purple);}
+.search-bar select{background:var(--card);border:1px solid var(--border);color:var(--text);font-family:'Share Tech Mono',monospace;font-size:.85rem;padding:.5rem .75rem;border-radius:4px;}
+.search-bar button{background:transparent;border:1px solid var(--purple);color:var(--purple);font-family:'Share Tech Mono',monospace;font-size:.85rem;padding:.5rem 1.25rem;border-radius:4px;cursor:pointer;}
+.search-bar button:hover{background:var(--purple);color:#fff;}
+
+/* Stat cards */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:.75rem;margin-bottom:1.5rem;}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:1.1rem 1rem;text-align:center;position:relative;overflow:hidden;}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.stat-card.teal::before{background:var(--teal)}.stat-card.purple::before{background:var(--purple)}.stat-card.pink::before{background:var(--pink)}.stat-card.cyan::before{background:var(--cyan)}
+.stat-value{font-family:'Orbitron',sans-serif;font-size:1.8rem;font-weight:700;line-height:1.1;margin-bottom:.25rem;}
+.stat-card.teal .stat-value{color:var(--teal)}.stat-card.purple .stat-value{color:var(--purple)}.stat-card.pink .stat-value{color:var(--pink)}.stat-card.cyan .stat-value{color:var(--cyan)}
+.stat-label{color:var(--muted);font-size:.7rem;letter-spacing:.15em;text-transform:uppercase;}
+
+/* Streak + bests */
+.highlights-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:.75rem;margin-bottom:1.5rem;}
+.highlight-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:1rem 1.25rem;display:flex;align-items:center;gap:.75rem;}
+.highlight-icon{font-size:1.5rem;min-width:2rem;text-align:center;}
+.highlight-label{color:var(--muted);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;margin-bottom:.2rem;}
+.highlight-val{font-family:'Orbitron',sans-serif;font-size:1.2rem;font-weight:700;}
+.highlight-val.purple{color:var(--purple)}.highlight-val.teal{color:var(--teal)}.highlight-val.pink{color:var(--pink)}.highlight-val.cyan{color:var(--cyan)}
+.highlight-sub{color:var(--muted);font-size:.7rem;margin-top:.15rem;}
+
+/* Charts */
+.charts-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:.75rem;margin-bottom:1.5rem;}
+.chart-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:1.1rem;}
+.chart-title{font-family:'Orbitron',sans-serif;font-size:.75rem;color:var(--purple);letter-spacing:.15em;margin-bottom:.75rem;text-transform:uppercase;}
+canvas{max-height:180px;}
+
+/* Table */
+.section-title{font-family:'Orbitron',sans-serif;font-size:.8rem;color:var(--pink);letter-spacing:.2em;text-transform:uppercase;margin-bottom:.75rem;padding-bottom:.4rem;border-bottom:1px solid var(--border);}
+.table-wrap{background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden;margin-bottom:1.5rem;}
+table{width:100%;border-collapse:collapse;font-size:.82rem;}
+thead th{background:#12122a;color:var(--purple);font-family:'Orbitron',sans-serif;font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;padding:.65rem .9rem;text-align:left;border-bottom:1px solid var(--border);}
+tbody tr{border-bottom:1px solid var(--border);transition:background .12s;}
+tbody tr:last-child{border-bottom:none;}
+tbody tr:hover{background:#1f1f3a;}
+td{padding:.55rem .9rem;color:var(--text);}
+td.wins{color:var(--purple);font-weight:bold;}td.kills{color:var(--cyan);}td.kd-good{color:var(--teal);}td.kd-bad{color:var(--pink);}td.wr{color:var(--pink);}td.date{color:var(--muted);font-size:.78rem;}td.notes{color:var(--muted);font-size:.78rem;font-style:italic;}td.season{color:var(--purple);font-size:.75rem;}
+a.session-link{color:var(--cyan);text-decoration:none;font-family:'Orbitron',sans-serif;font-size:.7rem;}
+a.session-link:hover{color:var(--teal);}
+a.share-link{color:var(--pink);text-decoration:none;font-size:.7rem;}
+a.share-link:hover{color:var(--purple);}
+.scanline{position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.03) 2px,rgba(0,0,0,0.03) 4px);pointer-events:none;z-index:999;}
+.footer{text-align:center;color:var(--muted);font-size:.72rem;padding:1.5rem 0 .75rem;letter-spacing:.1em;}
+</style>
+</head>
+<body>
+<div class="scanline"></div>
+<div class="container">
+  <div class="header">
+    <div class="logo">FNLOG</div>
+    <div class="tagline">ZERO BUILD SESSION TRACKER</div>
+    <div class="player-name">// {{ epic_name }}{% if current_season %} // {{ current_season }}{% endif %}</div>
+  </div>
+
+  <div class="search-bar">
+    <input type="text" id="playerInput" placeholder="Epic display name..." value="{{ epic_name }}">
+    <select id="seasonSelect">
+      <option value="">All Seasons</option>
+      {% for s in all_seasons %}
+      <option value="{{ s }}"{% if s == current_season %} selected{% endif %}>{{ s }}</option>
+      {% endfor %}
+    </select>
+    <button onclick="loadPlayer()">Load ↗</button>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card teal"><div class="stat-value">{{ total_sessions }}</div><div class="stat-label">Sessions</div></div>
+    <div class="stat-card cyan"><div class="stat-value">{{ total_matches }}</div><div class="stat-label">Matches</div></div>
+    <div class="stat-card purple"><div class="stat-value">{{ total_wins }}</div><div class="stat-label">Wins</div></div>
+    <div class="stat-card pink"><div class="stat-value">{{ win_rate }}%</div><div class="stat-label">Win Rate</div></div>
+    <div class="stat-card cyan"><div class="stat-value">{{ total_kills }}</div><div class="stat-label">Kills</div></div>
+    <div class="stat-card teal"><div class="stat-value">{{ hours }}h</div><div class="stat-label">Time Played</div></div>
+    <div class="stat-card purple"><div class="stat-value">{{ avg_kills }}</div><div class="stat-label">Avg Kills/Session</div></div>
+  </div>
+
+  <div class="highlights-grid">
+    <div class="highlight-card">
+      <div class="highlight-icon">🔥</div>
+      <div>
+        <div class="highlight-label">Win Streak</div>
+        <div class="highlight-val pink">{{ streak_current }} current</div>
+        <div class="highlight-sub">Best: {{ streak_longest }}</div>
+      </div>
+    </div>
+    <div class="highlight-card">
+      <div class="highlight-icon">💀</div>
+      <div>
+        <div class="highlight-label">Most Kills (Session)</div>
+        <div class="highlight-val cyan">{{ best_kills.val }}</div>
+        <div class="highlight-sub">{% if best_kills.id %}Session #{{ best_kills.id }} — {{ best_kills.date }}{% else %}No data yet{% endif %}</div>
+      </div>
+    </div>
+    <div class="highlight-card">
+      <div class="highlight-icon">⚡</div>
+      <div>
+        <div class="highlight-label">Best K/D (Session)</div>
+        <div class="highlight-val teal">{{ best_kd.val }}</div>
+        <div class="highlight-sub">{% if best_kd.id %}Session #{{ best_kd.id }} — {{ best_kd.date }}{% else %}No data yet{% endif %}</div>
+      </div>
+    </div>
+    <div class="highlight-card">
+      <div class="highlight-icon">👑</div>
+      <div>
+        <div class="highlight-label">Most Wins (Session)</div>
+        <div class="highlight-val purple">{{ best_wins.val }}</div>
+        <div class="highlight-sub">{% if best_wins.id %}Session #{{ best_wins.id }} — {{ best_wins.date }}{% else %}No data yet{% endif %}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="charts-grid">
+    <div class="chart-card"><div class="chart-title">Kills per Session</div><canvas id="killsChart"></canvas></div>
+    <div class="chart-card"><div class="chart-title">K/D Trend</div><canvas id="kdChart"></canvas></div>
+    <div class="chart-card"><div class="chart-title">Wins per Session</div><canvas id="winsChart"></canvas></div>
+  </div>
+
+  <div class="section-title">Recent Sessions</div>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>#</th><th>Date</th><th>Season</th><th>M</th><th>W</th><th>K</th><th>K/D</th><th>Win%</th><th>Mins</th><th>Notes</th><th></th></tr></thead>
+      <tbody>
+        {% for s in sessions %}
+        <tr>
+          <td>{{ s.id }}</td>
+          <td class="date">{{ s.ended_at }}</td>
+          <td class="season">{{ s.season or "—" }}</td>
+          <td>{{ s.matches }}</td>
+          <td class="wins">{{ s.wins }}</td>
+          <td class="kills">{{ s.kills }}</td>
+          <td class="{{ 'kd-good' if s.kd >= 1.0 else 'kd-bad' }}">{{ "%.2f" | format(s.kd) }}</td>
+          <td class="wr">{{ "%.1f" | format(s.win_rate) }}%</td>
+          <td>{{ s.minutes_played }}</td>
+          <td class="notes">{{ s.notes or "—" }}</td>
+          <td style="white-space:nowrap">
+            <a class="session-link" href="/session/{{ s.id }}">view</a>
+            &nbsp;
+            <a class="share-link" href="/share/{{ s.id }}">share</a>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="11" style="text-align:center;color:var(--muted);padding:2rem;">No sessions yet. Run fnlog start to begin.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="footer">FNLOG v0.2.0 // ZERO BUILD ONLY // mskeith</div>
+</div>
+
+<script>
+function loadPlayer(){
+  const p = document.getElementById('playerInput').value.trim();
+  const s = document.getElementById('seasonSelect').value;
+  if(!p) return;
+  let url = '/?player=' + encodeURIComponent(p);
+  if(s) url += '&season=' + encodeURIComponent(s);
+  window.location.href = url;
+}
+document.getElementById('playerInput').addEventListener('keydown', e => { if(e.key==='Enter') loadPlayer(); });
+
+const labels = {{ chart_labels }};
+const kills  = {{ chart_kills }};
+const wins   = {{ chart_wins }};
+const kd     = {{ chart_kd }};
+
+const cd = {
+  responsive:true,
+  plugins:{legend:{display:false}},
+  scales:{
+    x:{ticks:{color:'#7070a0',font:{size:9}},grid:{color:'#1a1a2e'}},
+    y:{ticks:{color:'#7070a0',font:{size:9}},grid:{color:'#2a2a4a'},beginAtZero:true}
+  }
+};
+
+new Chart(document.getElementById('killsChart'),{type:'bar',data:{labels,datasets:[{data:kills,backgroundColor:'rgba(0,212,255,0.45)',borderColor:'#00d4ff',borderWidth:1,borderRadius:3}]},options:cd});
+new Chart(document.getElementById('kdChart'),{type:'line',data:{labels,datasets:[{data:kd,borderColor:'#00f5d4',backgroundColor:'rgba(0,245,212,0.07)',tension:.4,pointBackgroundColor:'#00f5d4',pointRadius:3}]},options:{...cd,scales:{...cd.scales,y:{...cd.scales.y,beginAtZero:false}}}});
+new Chart(document.getElementById('winsChart'),{type:'bar',data:{labels,datasets:[{data:wins,backgroundColor:'rgba(180,79,255,0.45)',borderColor:'#b44fff',borderWidth:1,borderRadius:3}]},options:cd});
+</script>
+</body>
+</html>

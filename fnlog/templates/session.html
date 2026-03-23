@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FNLog // Session #{{ session.id }}</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
+  :root {
+    --purple:#b44fff;--pink:#ff4fb8;--teal:#00f5d4;--cyan:#00d4ff;
+    --bg:#0d0d1a;--card:#1a1a2e;--border:#2a2a4a;--text:#e0e0ff;--muted:#7070a0;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monospace;min-height:100vh;}
+  body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(180,79,255,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(180,79,255,0.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0;}
+  .container{max-width:900px;margin:0 auto;padding:2rem;position:relative;z-index:1;}
+  .back{color:var(--cyan);text-decoration:none;font-size:0.8rem;letter-spacing:0.1em;display:inline-block;margin-bottom:1.5rem;}
+  .back:hover{color:var(--teal);}
+  .title{font-family:'Orbitron',sans-serif;font-size:1.8rem;font-weight:900;background:linear-gradient(135deg,var(--purple),var(--pink));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin-bottom:0.3rem;}
+  .subtitle{color:var(--muted);font-size:0.8rem;letter-spacing:0.15em;margin-bottom:2rem;}
+  .stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:0.75rem;margin-bottom:2rem;}
+  .stat-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:1rem;text-align:center;}
+  .stat-card::before{content:'';display:block;height:2px;margin-bottom:0.75rem;border-radius:2px;}
+  .teal::before{background:var(--teal);}.purple::before{background:var(--purple);}.pink::before{background:var(--pink);}.cyan::before{background:var(--cyan);}
+  .stat-value{font-family:'Orbitron',sans-serif;font-size:1.6rem;font-weight:700;margin-bottom:0.2rem;}
+  .teal .stat-value{color:var(--teal);}.purple .stat-value{color:var(--purple);}.pink .stat-value{color:var(--pink);}.cyan .stat-value{color:var(--cyan);}
+  .stat-label{color:var(--muted);font-size:0.7rem;letter-spacing:0.12em;text-transform:uppercase;}
+  .section{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:1.25rem;margin-bottom:1.5rem;}
+  .section-title{font-family:'Orbitron',sans-serif;font-size:0.75rem;color:var(--pink);letter-spacing:0.2em;text-transform:uppercase;margin-bottom:1rem;padding-bottom:0.5rem;border-bottom:1px solid var(--border);}
+  .mode-row{display:flex;flex-wrap:wrap;gap:0.5rem 2rem;padding:0.5rem 0;border-bottom:1px solid var(--border);align-items:center;}
+  .mode-row:last-child{border-bottom:none;}
+  .mode-name{color:var(--pink);min-width:180px;font-size:0.85rem;}
+  .mode-stat{font-size:0.82rem;}.mode-stat span{color:var(--muted);font-size:0.75rem;}
+  .notes-text{color:var(--text);font-style:italic;font-size:0.9rem;}
+  .scanline{position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.03) 2px,rgba(0,0,0,0.03) 4px);pointer-events:none;z-index:999;}
+</style>
+</head>
+<body>
+<div class="scanline"></div>
+<div class="container">
+  <a class="back" href="/">← back to dashboard</a>
+
+  <div class="title">Session #{{ session.id }}</div>
+  <div class="subtitle">{{ session.started_at[:16].replace("T"," ") }} → {{ session.ended_at[:16].replace("T"," ") }} // {{ session.duration_min }} min</div>
+
+  <div class="stats-grid">
+    <div class="stat-card cyan"><div class="stat-value">{{ session.matches }}</div><div class="stat-label">Matches</div></div>
+    <div class="stat-card purple"><div class="stat-value">{{ session.wins }}</div><div class="stat-label">Wins</div></div>
+    <div class="stat-card cyan"><div class="stat-value">{{ session.kills }}</div><div class="stat-label">Kills</div></div>
+    <div class="stat-card teal"><div class="stat-value">{{ "%.2f"|format(session.kd) }}</div><div class="stat-label">K/D</div></div>
+    <div class="stat-card pink"><div class="stat-value">{{ "%.1f"|format(session.win_rate) }}%</div><div class="stat-label">Win Rate</div></div>
+    <div class="stat-card teal"><div class="stat-value">{{ session.minutes_played }}</div><div class="stat-label">Mins</div></div>
+  </div>
+
+  {% if session.mode_deltas %}
+  <div class="section">
+    <div class="section-title">Mode Breakdown</div>
+    {% for d in mode_rows %}
+    <div class="mode-row">
+      <div class="mode-name">{{ d.name }}</div>
+      <div class="mode-stat"><span>M</span> {{ d.matches }}</div>
+      <div class="mode-stat"><span>W</span> <span style="color:var(--purple)">{{ d.wins }}</span></div>
+      <div class="mode-stat"><span>K</span> <span style="color:var(--cyan)">{{ d.kills }}</span></div>
+      <div class="mode-stat"><span>K/D</span> <span style="color:{{ '#00f5d4' if d.kd >= 1.0 else '#ff4fb8' }}">{{ "%.2f"|format(d.kd) }}</span></div>
+      <div class="mode-stat"><span>Win%</span> <span style="color:var(--pink)">{{ "%.1f"|format(d.win_rate) }}%</span></div>
+      <div class="mode-stat"><span>Mins</span> {{ d.minutes_played }}</div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if session.notes %}
+  <div class="section">
+    <div class="section-title">Notes</div>
+    <div class="notes-text">{{ session.notes }}</div>
+  </div>
+  {% endif %}
+</div>
+</body>
+</html>
