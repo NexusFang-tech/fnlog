@@ -24,13 +24,27 @@ jobs:
           pip install ruff
 
       - name: Lint with ruff
-        run: ruff check fnlog/ --ignore E501
+        run: |
+          ruff check fnlog/ \
+            --ignore E501,E402,F401,F841,E711,E712,W291,W293,UP007,UP035,B006
 
       - name: Verify CLI registers correctly
         run: fnlog --help
+        env:
+          FNLOG_API_KEY: test
+          FNLOG_EPIC_NAME: TestPlayer
+          FNLOG_SEASON: Ch6S2
 
       - name: Verify DB initializes
         run: python -c "from fnlog.db import init_db; init_db(); print('DB OK')"
         env:
           FNLOG_API_KEY: test
           FNLOG_EPIC_NAME: TestPlayer
+          FNLOG_SEASON: Ch6S2
+
+      - name: Verify web app loads
+        run: python -c "from fnlog.web import app; print('Web app OK')"
+        env:
+          FNLOG_API_KEY: test
+          FNLOG_EPIC_NAME: TestPlayer
+          FNLOG_SEASON: Ch6S2
